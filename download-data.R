@@ -467,7 +467,27 @@ nyc_sales_clean_reduced <- nyc_sales_clean_reduced %>%
 
 #---------------One Hot Encoding For Categorical Columns------------------------------
 
+nyc_sales_clean_reduced <- nyc_sales_clean_reduced %>%
+  select(-neighborhood,-building_class_at_time_of_sale,-tax_class_at_present,-sale_month,-sale_year)
 
+
+colnames(nyc_sales_clean_reduced)
+
+
+# Step 1: Define the dummy variable encoder
+dummy_encoder <- dummyVars(~ borough + building_class_category + 
+                             tax_class_at_time_of_sale, data = nyc_sales_clean_reduced)
+
+# Step 2: Apply the encoder and get a data frame with One-Hot Encoded columns
+one_hot_encoded_df <- predict(dummy_encoder, newdata = nyc_sales_clean_reduced)
+one_hot_encoded_df <- as.data.frame(one_hot_encoded_df)
+
+# Step 3: Combine with the rest of the numeric columns
+nyc_sales_encoded <- cbind(nyc_sales_clean_reduced %>% select(-c(borough, building_class_category, 
+                                                         tax_class_at_time_of_sale)), one_hot_encoded_df)
+
+# Step 4: View the structure of the final encoded dataset
+str(nyc_sales_encoded)
 
 
 
