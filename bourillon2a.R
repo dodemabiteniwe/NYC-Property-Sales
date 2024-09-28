@@ -268,41 +268,41 @@ cat("SVM RMSE:", svm_rmse, "\n")
 
 
 # Two Approaches: Original Sale Price & Log Sale Price
-nyc_data_encoded$LOG.SALE.PRICE <- log(nyc_data_encoded$SALE.PRICE)
+nyc_data_encoded$log_sale_price <- log(nyc_data_encoded$sale_price)
 
 # Split into training and testing sets for both original and log Sale Price
 set.seed(123)
-trainIndex <- createDataPartition(nyc_data_encoded$SALE.PRICE, p = .8, list = FALSE)
+trainIndex <- createDataPartition(nyc_data_encoded$sale_price, p = .8, list = FALSE)
 train_data_orig <- nyc_data_encoded[trainIndex, ]
 test_data_orig <- nyc_data_encoded[-trainIndex, ]
 
-train_data_log <- train_data_orig %>% mutate(SALE.PRICE = LOG.SALE.PRICE)
-test_data_log <- test_data_orig %>% mutate(SALE.PRICE = LOG.SALE.PRICE)
+train_data_log <- train_data_orig %>% mutate(sale_price = log_sale_price)
+test_data_log <- test_data_orig %>% mutate(sale_price = log_sale_price)
 
-train_control <- trainControl(method = "cv", number = 10)
+train_control <- trainControl(method = "cv", number = 2)
 
 # Function to Evaluate Models
 evaluate_model <- function(model, train_data, test_data, response_var) {
   model_fit <- train(as.formula(paste(response_var, "~ .")), data = train_data, method = model, trControl = train_control)
   predictions <- predict(model_fit, newdata = test_data)
-  if (response_var == "LOG.SALE.PRICE") {
+  if (response_var == "log_sale_price") {
     predictions <- exp(predictions) # Reverse log for comparison
   }
-  return(RMSE(predictions, test_data$SALE.PRICE))
+  return(RMSE(predictions, test_data$sale_price))
 }
 
 # List of Models
 models <- c("lm", "rf", "svmRadial", "gbm", "xgbTree")
 
 # Evaluate models for original sale price
-rmse_results_orig <- sapply(models, evaluate_model, train_data = train_data_orig, test_data = test_data_orig, response_var = "SALE.PRICE")
+rmse_results_orig <- sapply(models, evaluate_model, train_data = train_data_orig, test_data = test_data_orig, response_var = "sale_price")
 names(rmse_results_orig) <- models
 cat("RMSE for Original Sale Price:\n")
 print(rmse_results_orig)
 
 # Evaluate models for log sale price
-rmse_results_log <- sapply(models, evaluate_model, train_data = train_data_log, test_data = test_data_log, response_var = "LOG.SALE.PRICE")
-names(rmse_results_log) <- models
+rmse_results_log <- sapply(models, evaluate_model, train_data = train_data_log, test_data = test_data_log, response_var = "log_sale_price")
+ names(rmse_results_log) <- models
 cat("RMSE for Log Sale Price:\n")
 print(rmse_results_log)
 
