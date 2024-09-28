@@ -10,12 +10,15 @@ install.packages(c("xgboost", "e1071"))
 # Load additional libraries
 library(xgboost)
 library(e1071)
+library(MASS) 
+library(gbm) 
 library(tidyr)
 library(reshape2)
 library(janitor)
 
+
 zip_url <- "https://raw.githubusercontent.com/dodemabiteniwe/NYC-Property-Sales/main/nyc-rolling-sales.csv.zip"
-zip_file <- "nyc-rolling-sales2.zip"  # Local name for the ZIP file
+zip_file <- "nyc-rolling-sales.zip"  # Local name for the ZIP file
 csv_file <- "nyc-rolling-sales.csv"  # Name of the CSV inside the ZIP
 
 # Download the ZIP file from GitHub
@@ -27,7 +30,7 @@ unzip(zip_file, files = csv_file)
 # Step 3: Load the CSV data into R
 nyc_sales <- fread(csv_file)
 # View the structure of the dataset
-str(nyc_sales)
+ str(nyc_sales)
 
 #------------------------------------------------------Data Cleaning------------------------------------------------
 
@@ -407,12 +410,10 @@ nyc_sales_clean2 <- nyc_sales_clean2 %>%
 
 # Check the updated column names
 colnames(nyc_sales_clean2)
-
+colnames(numeric_columns)
 # Select numeric columns to include in the correlation matrix
 # Assuming nyc_sales_clean is your cleaned dataset
-numeric_columns <- nyc_sales_clean2 %>%
-  select(`sale_price`, `residential_units`, `commercial_units`, `total_units`, 
-         `land_square_feet`, `gross_square_feet`, `building_age`)
+numeric_columns <- nyc_sales_clean2%>%select("sale_price")
 
 # Compute the correlation matrix
 cor_matrix <- cor(numeric_columns, use = "complete.obs")
@@ -488,6 +489,195 @@ nyc_sales_encoded <- cbind(nyc_sales_clean_reduced %>% select(-c(borough, buildi
 
 # Step 4: View the structure of the final encoded dataset
 str(nyc_sales_encoded)
+nyc_sales_normalized <-as.data.frame(nyc_sales_encoded)
+
+
+
+highly_correlated <- findCorrelation(cor(nyc_sales_encoded), cutoff = 0.75)
+train_dataj <- nyc_sales_encoded[, -highly_correlated]
+
+str(highly_correlated)
+
+
+
+
+
+
+# Normalize numeric columns (optional for some algorithms)
+preproc <- preProcess(nyc_sales_encoded, method = c("center", "scale"))
+nyc_sales_normalized <- predict(preproc, nyc_sales_encoded)
+
+# Split into training and testing sets (80/20 split)
+set.seed(123)  # For reproducibility
+train_index <- createDataPartition(nyc_sales_normalized$sale_price, p = 0.8, list = FALSE)
+train_data <- nyc_sales_normalized[train_index, ]
+test_data <- nyc_sales_normalized[-train_index, ]
+
+# Extract feature matrix and target vector
+X_train <- train_data[, -which(names(train_data) == "sale_price")]
+y_train <- train_data$sale_price
+X_test <- test_data[, -which(names(test_data) == "sale_price")]
+y_test <- test_data$sale_price
+
+# Create a list to store model results for each approach
+model_results_original <- list()
+model_results_log <- list()
+
+### APPROACH 1: MODELS USING ORIGINAL SALE PRICE ###
+
+# Linear Regression Model (Original)
+lm_model_original <- train(sale_price ~ ., data = train_data, method = "lm")
+lm_pred_original <- predict(lm_model_original, X_test)
+lm_rmse_original <- RMSE(lm_pred_original, y_test)
+lm_r2_original <- R2(lm_pred_original, y_test)
+model_results_original$Linear_Regression <- list(RMSE = lm_rmse_original, R2 = lm_r2_original)
+
+# Decision Tree Model (Original)
+tree_model_original <- train(sale_price ~ ., data = train_data, method = "rpart")
+tree_pred_original <- predict(tree_model_original, X_test)
+tree_rmse_original <- RMSE(tree_pred_original, y_test)
+tree_r2_original <- R2(tree_pred_original, y_test)
+model_results_original$Decision_Tree <- list(RMSE = tree_rmse_original, R2 = tree_r2_original)
+
+# Random Forest Model (Original)
+rf_model_original <- randomForest(sale_price ~ ., data = train_data, ntree = 100)
+rf_pred_original <- predict(rf_model_original, X_test)
+rf_rmse_original <- RMSE(rf_pred_original, y_test)
+rf_r2_original <- R2(rf_pred_original, y_test)
+model_results_original$Random_Forest <- list(RMSE = rf_rmse_original, R2 = rf_r2_original)
+
+# Gradient Boosting Model (Original)
+gbm_model_original <- train(sale_price ~ ., data = train_data, method = "gbm", verbose = FALSE)
+gbm_pred_original <- predict(gbm_model_original, X_test)
+gbm_rmse_original <- RMSE(gbm_pred_original, y_test)
+gbm_r2_original <- R2(gbm_pred_original, y_test)
+model_results_original$Gradient_Boosting <- list(RMSE = gbm_rmse_original, R2 = gbm_r2_original)
+
+# XGBoost Model (Original)
+xgb_model_original <- xgboost(data = as.matrix(X_train), label = y_train, nrounds = 100, objective = "reg:squarederror", verbose = 0)
+xgb_pred_original <- predict(xgb_model_original, as.matrix(X_test))
+xgb_rmse_original <- RMSE(xgb_pred_original, y_test)
+xgb_r2_original <- R2(xgb_pred_original, y_test)
+model_results_original$XGBoost <- list(RMSE = xgb_rmse_original, R2 = xgb_r2_original)
+
+# SVM Model (Original)
+svm_model_original <- train(sale_price ~ ., data = train_data, method = "svmRadial")
+svm_pred_original <- predict(svm_model_original, X_test)
+svm_rmse_original <- RMSE(svm_pred_original, y_test)
+svm_r2_original <- R2(svm_pred_original, y_test)
+model_results_original$SVM <- list(RMSE = svm_rmse_original, R2 = svm_r2_original)
+
+### APPROACH 2: MODELS USING LOG-TRANSFORMED SALE PRICE ###
+
+# Log-transform the target variable
+train_data$log_sale_price <- log1p(train_data$sale_price)  # log(1 + sale_price) to avoid log(0)
+test_data$log_sale_price <- log1p(test_data$sale_price)
+
+# Linear Regression Model (Log-transformed)
+lm_model_log <- train(log_sale_price ~ ., data = train_data, method = "lm")
+lm_pred_log <- predict(lm_model_log, X_test)
+lm_rmse_log <- RMSE(expm1(lm_pred_log), y_test)  # expm1 to reverse log1p
+lm_r2_log <- R2(expm1(lm_pred_log), y_test)
+model_results_log$Linear_Regression <- list(RMSE = lm_rmse_log, R2 = lm_r2_log)
+
+# Decision Tree Model (Log-transformed)
+tree_model_log <- train(log_sale_price ~ ., data = train_data, method = "rpart")
+tree_pred_log <- predict(tree_model_log, X_test)
+tree_rmse_log <- RMSE(expm1(tree_pred_log), y_test)
+tree_r2_log <- R2(expm1(tree_pred_log), y_test)
+model_results_log$Decision_Tree <- list(RMSE = tree_rmse_log, R2 = tree_r2_log)
+
+# Random Forest Model (Log-transformed)
+rf_model_log <- randomForest(log_sale_price ~ ., data = train_data, ntree = 100)
+rf_pred_log <- predict(rf_model_log, X_test)
+rf_rmse_log <- RMSE(expm1(rf_pred_log), y_test)
+rf_r2_log <- R2(expm1(rf_pred_log), y_test)
+model_results_log$Random_Forest <- list(RMSE = rf_rmse_log, R2 = rf_r2_log)
+
+# Gradient Boosting Model (Log-transformed)
+gbm_model_log <- train(log_sale_price ~ ., data = train_data, method = "gbm", verbose = FALSE)
+gbm_pred_log <- predict(gbm_model_log, X_test)
+gbm_rmse_log <- RMSE(expm1(gbm_pred_log), y_test)
+gbm_r2_log <- R2(expm1(gbm_pred_log), y_test)
+model_results_log$Gradient_Boosting <- list(RMSE = gbm_rmse_log, R2 = gbm_r2_log)
+
+# XGBoost Model (Log-transformed)
+xgb_model_log <- xgboost(data = as.matrix(X_train), label = log1p(y_train), nrounds = 100, objective = "reg:squarederror", verbose = 0)
+xgb_pred_log <- predict(xgb_model_log, as.matrix(X_test))
+xgb_rmse_log <- RMSE(expm1(xgb_pred_log), y_test)
+xgb_r2_log <- R2(expm1(xgb_pred_log), y_test)
+model_results_log$XGBoost <- list(RMSE = xgb_rmse_log, R2 = xgb_r2_log)
+
+# SVM Model (Log-transformed)
+svm_model_log <- train(log_sale_price ~ ., data = train_data, method = "svmRadial")
+svm_pred_log <- predict(svm_model_log, X_test)
+svm_rmse_log <- RMSE(expm1(svm_pred_log), y_test)
+svm_r2_log <- R2(expm1(svm_pred_log), y_test)
+model_results_log$SVM <- list(RMSE = svm_rmse_log, R2 = svm_r2_log)
+
+### COMPARE RESULTS ###
+
+# Create dataframes for both approaches
+model_results_original_df <- do.call(rbind, lapply(model_results_original, as.data.frame))
+model_results_log_df <- do.call(rbind, lapply(model_results_log, as.data.frame))
+
+# Round for better readability
+model_results_original_df <- round(model_results_original_df, 4)
+model_results_log_df <- round(model_results_log_df, 4)
+
+# Display the performance comparison
+print("Model Performance (Original SALE PRICE):")
+print(model_results_original_df)
+
+print("\nModel Performance (Log-transformed SALE PRICE):")
+print(model_results_log_df)
+
+# Compare RMSE for each approach
+cat("\nBest performing model based on RMSE (Original SALE PRICE):", rownames(model_results_original_df)[which.min(model_results_original_df$RMSE)], "\n")
+cat("Best performing model based on RMSE (Log-transformed SALE PRICE):", rownames(model_results_log_df)[which.min(model_results_log_df$RMSE)], "\n") 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
