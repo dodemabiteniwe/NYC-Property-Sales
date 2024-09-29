@@ -339,6 +339,76 @@ print(best_model_orig)
 
 
 
+
+
+
+# Set up training control with cross-validation
+train_control2 <- trainControl(
+  method = "cv",              # Cross-validation method
+  number = 5,                 # 5-fold cross-validation
+  verboseIter = TRUE,         # Show progress
+  search = "grid"             # Use grid search for hyperparameter tuning
+)
+
+# Set up the grid for hyperparameter tuning
+tune_grid <- expand.grid(
+  mtry = c(3, 5, 7, 9),       # Number of variables randomly sampled at each split
+  ntree = c(100, 300, 500),    # Number of trees
+  maxnodes = c(30, 50, 100)    # Maximum terminal nodes in trees
+)
+
+# Train Random Forest model with hyperparameter tuning
+rf_optimized <- train(
+  SALE.PRICE ~ .,              # Formula, dependent variable: SALE.PRICE
+  data = train_data_orig,      # Training data
+  method = "rf",               # Random Forest method
+  tuneGrid = tune_grid,        # Grid of hyperparameters to search
+  trControl = train_control,   # Training control
+  metric = "RMSE"              # Metric to optimize (Root Mean Squared Error)
+)
+
+# Print the best model's hyperparameters
+print(rf_optimized$bestTune)
+
+# Print the results for each hyperparameter combination
+print(rf_optimized$results)
+
+# Predict on the test data using the best tuned model
+rf_predictions <- predict(rf_optimized, newdata = test_data_orig)
+
+# Calculate the final metrics on the test data
+final_rmse <- RMSE(rf_predictions, test_data_orig$SALE.PRICE)
+final_mae <- MAE(rf_predictions, test_data_orig$SALE.PRICE)
+
+# Print the final performance metrics
+cat("Final Model Performance:\n")
+cat("RMSE: ", round(final_rmse, 5), "\n")
+cat("MAE: ", round(final_mae, 5), "\n")
+
+# Plot variable importance
+varImpPlot(rf_optimized$finalModel)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Evaluate models for log sale price
 results_log <- lapply(models, evaluate_model, train_data = train_data_log, test_data = test_data_log, response_var = "log_sale_price")
 
