@@ -283,38 +283,99 @@ train_control <- trainControl(method = "cv", number = 2)
 
 # Function to Evaluate Models
 evaluate_model <- function(model, train_data, test_data, response_var) {
+  start_time <- Sys.time()
   model_fit <- train(as.formula(paste(response_var, "~ .")), data = train_data, method = model, trControl = train_control)
-  predictions <- predict(model_fit, newdata = test_data)
+  # Predictions for train and test datasets
+  train_predictions <- predict(model_fit, newdata = train_data)
+  test_predictions <- predict(model_fit, newdata = test_data)
+  #Execution time
+  end_time <- Sys.time()
+  exec_time <- round(difftime(end_time, start_time, units = "secs"), 2)
+  
   if (response_var == "log_sale_price") {
-    predictions <- exp(predictions) # Reverse log for comparison
+    train_predictions <- exp(train_predictions)
+    test_predictions <- exp(test_predictions) # Reverse log for comparison
   }
-  return(RMSE(predictions, test_data$sale_price))
+  # Train metrics
+  train_rmse <- RMSE(train_predictions, train_data$sale_price)
+  train_mae <- MAE(train_predictions, train_data$sale_price)
+  train_score <- cor(train_predictions, train_data$sale_price)^2
+  
+  # Test metrics
+  test_rmse <- RMSE(test_predictions, test_data$sale_price)
+  test_mae <- MAE(test_predictions, test_data$sale_price)
+  test_score <- cor(test_predictions, test_data$sale_price)^2
+  
+  # Return a list of all metrics including execution time
+  return(data.frame(
+    Model = model,
+    Train_Score = round(train_score, 5),
+    Test_Score = round(test_score, 5),
+    Train_RMSE = round(train_rmse, 5),
+    Test_RMSE = round(test_rmse, 5),
+    Train_MAE = round(train_mae, 5),
+    Test_MAE = round(test_mae, 5),
+    Execution_Time_Secs = exec_time
+  ))
 }
 
 # List of Models
 models <- c("lm", "rf", "svmRadial", "gbm", "xgbTree")
 
 # Evaluate models for original sale price
-rmse_results_orig <- sapply(models, evaluate_model, train_data = train_data_orig, test_data = test_data_orig, response_var = "sale_price")
-names(rmse_results_orig) <- models
-cat("RMSE for Original Sale Price:\n")
-print(rmse_results_orig)
+results_orig <- lapply(models, evaluate_model, train_data = train_data_orig, test_data = test_data_orig, response_var = "sale_price")
+ 
+# Combine results into data frames
+results_orig_df <- do.call(rbind, results_orig)
+
+# Display results
+cat("Results for Original Sale Price:\n")
+print(results_orig_df)
+
+# Comparing Results
+cat("\nBest Model for Original Sale Price Approach:\n")
+best_model_orig <- results_orig_df[which.min(results_orig_df$Test_RMSE),]
+print(best_model_orig)
+
+
 
 # Evaluate models for log sale price
-rmse_results_log <- sapply(models, evaluate_model, train_data = train_data_log, test_data = test_data_log, response_var = "log_sale_price")
- names(rmse_results_log) <- models
-cat("RMSE for Log Sale Price:\n")
-print(rmse_results_log)
+results_log <- lapply(models, evaluate_model, train_data = train_data_log, test_data = test_data_log, response_var = "log_sale_price")
 
-# Compare and choose the best approach
-best_model_orig <- names(rmse_results_orig)[which.min(rmse_results_orig)]
-best_model_log <- names(rmse_results_log)[which.min(rmse_results_log)]
+# Combine results into data frames
+results_log_df <- do.call(rbind, results_log)
 
-cat("Best Model for Original Sale Price:", best_model_orig, "\n")
-cat("Best Model for Log Sale Price:", best_model_log, "\n")
+# Display results
+cat("\nResults for Log Sale Price:\n")
+print(results_log_df)
 
-if (min(rmse_results_orig) < min(rmse_results_log)) {
-  cat("Original Sale Price approach is better with model:", best_model_orig, "\n")
+# Comparing Results
+cat("\nBest Model for Log Sale Price Approach:\n")
+best_model_log <- results_log_df[which.min(results_log_df$Test_RMSE),]
+print(best_model_log)
+
+# Final comparison
+if (min(results_orig_df$Test_RMSE) < min(results_log_df$Test_RMSE)) {
+  cat("\nOriginal Sale Price approach is better with model:\n")
+  print(best_model_orig)
 } else {
-  cat("Log Sale Price approach is better with model:", best_model_log, "\n")
+  cat("\nLog Sale Price approach is better with model:\n")
+  print(best_model_log)
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
