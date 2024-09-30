@@ -268,7 +268,10 @@ cat("SVM RMSE:", svm_rmse, "\n")
 
 
 # Two Approaches: Original Sale Price & Log Sale Price
-nyc_data_encoded$log_sale_price <- log(nyc_data_encoded$sale_price)
+#nyc_data_encoded$log_sale_price <- log(nyc_data_encoded$sale_price)
+nyc_data_encoded1 <- nyc_data_encoded%>% mutate(log_sale_price = log(sale_price))
+#nyc_data_encoded1 <- nyc_data_encoded1 %>%
+ # select(-sale_price)
 
 # Split into training and testing sets for both original and log Sale Price
 set.seed(123)
@@ -276,13 +279,23 @@ trainIndex <- createDataPartition(nyc_data_encoded$sale_price, p = .8, list = FA
 train_data_orig <- nyc_data_encoded[trainIndex, ]
 test_data_orig <- nyc_data_encoded[-trainIndex, ]
 
-train_data_log <- train_data_orig %>% mutate(sale_price = log_sale_price)
-test_data_log <- test_data_orig %>% mutate(sale_price = log_sale_price)
+train_data_log <- nyc_data_encoded1[trainIndex, ]
+test_data_log <- nyc_data_encoded1[-trainIndex, ]
+
+
+#train_data_log <- train_data_orig %>% mutate(sale_price = log_sale_price)
+#test_data_log <- test_data_orig %>% mutate(sale_price = log_sale_price)
 
 train_control <- trainControl(method = "cv", number = 2)
 
 # Function to Evaluate Models
 evaluate_model <- function(model, train_data, test_data, response_var) {
+  if (response_var == "log_sale_price") {
+    train_saleprice <- train_data$sale_price
+    test_saleprice <- test_data$sale_price # Reverse log for comparison
+    train_data <- train_data%>%select(-sale_price)
+    test_data <- test_data%>%select(-sale_price)
+  }
   start_time <- Sys.time()
   model_fit <- train(as.formula(paste(response_var, "~ .")), data = train_data, method = model, trControl = train_control)
   # Predictions for train and test datasets
@@ -295,7 +308,16 @@ evaluate_model <- function(model, train_data, test_data, response_var) {
   if (response_var == "log_sale_price") {
     train_predictions <- exp(train_predictions)
     test_predictions <- exp(test_predictions) # Reverse log for comparison
-  }
+    # Train metrics
+    train_rmse <- RMSE(train_predictions, train_saleprice)
+    train_mae <- MAE(train_predictions, train_saleprice)
+    train_score <- cor(train_predictions, train_saleprice)^2
+    
+    # Test metrics
+    test_rmse <- RMSE(test_predictions, test_saleprice)
+    test_mae <- MAE(test_predictions, test_saleprice)
+    test_score <- cor(test_predictions, test_saleprice)^2
+  }else{
   # Train metrics
   train_rmse <- RMSE(train_predictions, train_data$sale_price)
   train_mae <- MAE(train_predictions, train_data$sale_price)
@@ -305,7 +327,7 @@ evaluate_model <- function(model, train_data, test_data, response_var) {
   test_rmse <- RMSE(test_predictions, test_data$sale_price)
   test_mae <- MAE(test_predictions, test_data$sale_price)
   test_score <- cor(test_predictions, test_data$sale_price)^2
-  
+  }
   # Return a list of all metrics including execution time
   return(data.frame(
     Model = model,
@@ -320,12 +342,12 @@ evaluate_model <- function(model, train_data, test_data, response_var) {
 }
 
 # List of Models
-models <- c("lm", "rf", "svmRadial", "gbm", "xgbTree")
+models <- c("lm", "ranger", "svmRadial", "gbm", "xgbTree")
 
 # Evaluate models for original sale price
 results_orig <- lapply(models, evaluate_model, train_data = train_data_orig, test_data = test_data_orig, response_var = "sale_price")
  
-# Combine results into data frames
+ # Combine results into data frames
 results_orig_df <- do.call(rbind, results_orig)
 
 # Display results
@@ -343,11 +365,9 @@ print(best_model_orig)
 
 
 # Set up training control with cross-validation
-train_control2 <- trainControl(
+train_control <- trainControl(
   method = "cv",              # Cross-validation method
-  number = 5,                 # 5-fold cross-validation
-  verboseIter = TRUE,         # Show progress
-  search = "grid"             # Use grid search for hyperparameter tuning
+  number = 2                # 5-fold cross-validation
 )
 
 # Set up the grid for hyperparameter tuning
@@ -357,28 +377,89 @@ tune_grid <- expand.grid(
   maxnodes = c(30, 50, 100)    # Maximum terminal nodes in trees
 )
 
+tune_grid
+
 # Train Random Forest model with hyperparameter tuning
-rf_optimized <- train(
-  SALE.PRICE ~ .,              # Formula, dependent variable: SALE.PRICE
+rf_optimized1 <- train(
+  sale_price ~ .,              # Formula, dependent variable: SALE.PRICE
   data = train_data_orig,      # Training data
   method = "rf",               # Random Forest method
-  tuneGrid = tune_grid,        # Grid of hyperparameters to search
   trControl = train_control,   # Training control
   metric = "RMSE"              # Metric to optimize (Root Mean Squared Error)
 )
 
 # Print the best model's hyperparameters
-print(rf_optimized$bestTune)
+print(rf_optimized1$bestTune)
 
 # Print the results for each hyperparameter combination
-print(rf_optimized$results)
+print(rf_optimized1$results)
 
+# Predict on the test data using the best tuned model
+rf_predictions <- predict(rf_optimized1, newdata = test_data_orig)
+
+# Calculate the final metrics on the test data
+final_rmse <- RMSE(rf_predictions, test_data_orig$sale_price)
+final_mae <- MAE(rf_predictions, test_data_orig$sale_price)
+
+# Print the final performance metrics
+cat("Final Model Performance:\n")
+cat("RMSE: ", round(final_rmse, 5), "\n")
+cat("MAE: ", round(final_mae, 5), "\n")
+
+# Plot variable importance
+varImpPlot(rf_optimized1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+library(ranger)
+
+# Set up training control with cross-validation
+train_control <- trainControl(
+  method = "cv",              # Cross-validation method
+  number = 5,                 # 5-fold cross-validation
+  verboseIter = TRUE          # Show progress
+)
+
+
+# Set up the grid for hyperparameter tuning including ntree, mtry, and maxnodes
+tune_grid <- expand.grid(
+  mtry = c(3, 5, 7, 9),          # Number of variables randomly sampled at each split
+  splitrule = "variance",        # Split rule for regression
+  min.node.size = c(50, 100, 150) # Equivalent to maxnodes
+)
+
+# Train Ranger Random Forest model with hyperparameter tuning
+rf_optimized <- train(
+  sale_price ~ .,                # Formula, dependent variable: SALE.PRICE
+  data = train_data_orig,        # Training data
+  method = "ranger",             # Ranger Random Forest method
+  tuneGrid = tune_grid,          # Grid of hyperparameters to search
+  trControl = train_control,     # Training control
+  num.trees = 300,               # Number of trees
+  importance = 'impurity'        # Variable importance measure
+)
+
+# Print the best model's hyperparameters
+print(rf_optimized$bestTune)
 # Predict on the test data using the best tuned model
 rf_predictions <- predict(rf_optimized, newdata = test_data_orig)
 
 # Calculate the final metrics on the test data
-final_rmse <- RMSE(rf_predictions, test_data_orig$SALE.PRICE)
-final_mae <- MAE(rf_predictions, test_data_orig$SALE.PRICE)
+final_rmse <- RMSE(rf_predictions, test_data_orig$sale_price)
+final_mae <- MAE(rf_predictions, test_data_orig$sale_price)
 
 # Print the final performance metrics
 cat("Final Model Performance:\n")
@@ -387,6 +468,20 @@ cat("MAE: ", round(final_mae, 5), "\n")
 
 # Plot variable importance
 varImpPlot(rf_optimized$finalModel)
+
+var_importance <- varImp(rf_optimized)
+
+# Print variable importance
+print(var_importance)
+
+# Plot variable importance
+plot(var_importance)
+
+
+
+
+
+
 
 
 
