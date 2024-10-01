@@ -83,7 +83,9 @@ nyc_data <- nyc_data %>%
   filter(between(`GROSS SQUARE FEET`, mean(`GROSS SQUARE FEET`) - 3*sd(`GROSS SQUARE FEET`), 
                  mean(`GROSS SQUARE FEET`) + 3*sd(`GROSS SQUARE FEET`))) %>%
   filter(between(`LAND SQUARE FEET`, mean(`LAND SQUARE FEET`) - 3*sd(`LAND SQUARE FEET`), 
-                 mean(`LAND SQUARE FEET`) + 3*sd(`LAND SQUARE FEET`)))
+                 mean(`LAND SQUARE FEET`) + 3*sd(`LAND SQUARE FEET`)))%>%
+  filter(between(`SALE PRICE`, mean(`SALE PRICE`) - 3*sd(`SALE PRICE`), 
+                 mean(`SALE PRICE`) + 3*sd(`SALE PRICE`)))
 
 corr_after_outliers2 <- cor(nyc_data %>% select_if(is.numeric), use = "complete.obs")
 
@@ -297,7 +299,7 @@ evaluate_model <- function(model, train_data, test_data, response_var) {
     test_data <- test_data%>%select(-sale_price)
   }
   start_time <- Sys.time()
-  model_fit <- train(as.formula(paste(response_var, "~ .")), data = train_data, method = model, trControl = train_control)
+  model_fit <- train(as.formula(paste(response_var, "~ .")), data = train_data, method = model, trControl = train_control, preProcess = "nzv")
   # Predictions for train and test datasets
   train_predictions <- predict(model_fit, newdata = train_data)
   test_predictions <- predict(model_fit, newdata = test_data)
