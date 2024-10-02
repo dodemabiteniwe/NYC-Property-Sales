@@ -98,8 +98,8 @@ correlation_table2 <- data.frame(
 )
 print(correlation_table2)
 
-
-
+shapiro.test(nyc_data$`SALE PRICE`)
+ggqqplot(nyc_data_encoded1$log_sale_price)
 #######################################################################
 #------Exploratory Data Analysis (EDA)----------------------------
 ######################################################
@@ -299,7 +299,7 @@ evaluate_model <- function(model, train_data, test_data, response_var) {
     test_data <- test_data%>%select(-sale_price)
   }
   start_time <- Sys.time()
-  model_fit <- train(as.formula(paste(response_var, "~ .")), data = train_data, method = model, trControl = train_control, preProcess = "nzv")
+  model_fit <- train(as.formula(paste(response_var, "~ .")), data = train_data, method = model, trControl = train_control, preProcess = c("center", "scale","nzv"))
   # Predictions for train and test datasets
   train_predictions <- predict(model_fit, newdata = train_data)
   test_predictions <- predict(model_fit, newdata = test_data)
