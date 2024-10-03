@@ -1,0 +1,477 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\PassOptionsToPackage{dvipsnames,svgnames,x11names}{xcolor}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{longtable,booktabs,array}
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{5}
+% definitions for citeproc citations
+\NewDocumentCommand\citeproctext{}{}
+\NewDocumentCommand\citeproc{mm}{%
+  \begingroup\def\citeproctext{#2}\cite{#1}\endgroup}
+\makeatletter
+ % allow citations to break across lines
+ \let\@cite@ofmt\@firstofone
+ % avoid brackets around text for \cite:
+ \def\@biblabel#1{}
+ \def\@cite#1#2{{#1\if@tempswa , #2\fi}}
+\makeatother
+\newlength{\cslhangindent}
+\setlength{\cslhangindent}{1.5em}
+\newlength{\csllabelwidth}
+\setlength{\csllabelwidth}{3em}
+\newenvironment{CSLReferences}[2] % #1 hanging-indent, #2 entry-spacing
+ {\begin{list}{}{%
+  \setlength{\itemindent}{0pt}
+  \setlength{\leftmargin}{0pt}
+  \setlength{\parsep}{0pt}
+  % turn on hanging indent if param 1 is 1
+  \ifodd #1
+   \setlength{\leftmargin}{\cslhangindent}
+   \setlength{\itemindent}{-1\cslhangindent}
+  \fi
+  % set entry spacing
+  \setlength{\itemsep}{#2\baselineskip}}}
+ {\end{list}}
+\usepackage{calc}
+\newcommand{\CSLBlock}[1]{\hfill\break\parbox[t]{\linewidth}{\strut\ignorespaces#1\strut}}
+\newcommand{\CSLLeftMargin}[1]{\parbox[t]{\csllabelwidth}{\strut#1\strut}}
+\newcommand{\CSLRightInline}[1]{\parbox[t]{\linewidth - \csllabelwidth}{\strut#1\strut}}
+\newcommand{\CSLIndent}[1]{\hspace{\cslhangindent}#1}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{wrapfig}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+\usepackage{makecell}
+\usepackage{xcolor}
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={NYC Proprety Sales data with R: Model for predicting sale price.},
+  pdfauthor={Dodema BITENIWE},
+  colorlinks=true,
+  linkcolor={blue},
+  filecolor={Maroon},
+  citecolor={Blue},
+  urlcolor={red},
+  pdfcreator={LaTeX via pandoc}}
+
+\title{NYC Proprety Sales data with R: Model for predicting sale price.}
+\author{Dodema BITENIWE}
+\date{03 octobre, 2024}
+
+\begin{document}
+\maketitle
+
+{
+\hypersetup{linkcolor=}
+\setcounter{tocdepth}{2}
+\tableofcontents
+}
+\newpage
+
+\section{Project overview}\label{project-overview}
+
+This project is part of Data Science professional certification pathway offered by HarvardX on edx. It is the second project in the final course of the program. In this project, we propose to analyze data relating to real estate properties in New York City, and to build a powerful model for predicting real estate sales prices in this city, based on the characteristics of these properties.
+
+The data analyzed in this project comes from the (\href{https://www.kaggle.com/datasets}{kaggle} site, a site on which you can find various data and sizes accessible to the public for data science training. The data from this project is named NYC Property Sales on the site, and contains records on every construction or fraction of a construction (apartment, etc.) in the New York City real estate market over the last twelve months. The data contains information on the location, address, type, sale price and sale date of each building unit.
+
+In this report, we will start with an organization of the data, followed by an exploratory analysis of the data, then the construction of the model and presentation of the results, and finally the conclusion.
+
+\section{Data processing and organization}\label{data-processing-and-organization}
+
+The data was downloaded through this \href{https://www.kaggle.com/datasets/new-york-city/nyc-property-sales}{link} and then cleaned. The first step was to format the data appropriately and remove any columns or variables that were not relevant to the purpose of the project. In the second stage, we processed the missing data to make it more compact. The final processing step involved removing outliers from the data.
+
+Table \ref{tab:datahead} shows the first lines of some relevant columns of data. The presence of missing data is easy to spot. We start by deleting rows where the selling price is negative or zero. A zero or extremely low sale price characterizes sales that are in fact transfers of ownership between parties: for example, parents transferring ownership of their home to a child after moving to retire.\\
+Also, for the building\_age variable, we require it to be non-zero and non-negative, otherwise it would be counted as missing data.
+
+\begin{table}[H]
+\centering
+\caption{\label{tab:datahead}first lines of some relevant columns of data}
+\centering
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{
+\begin{tabular}[t]{llrrrrrrr}
+\toprule
+BOROUGH & BUILDING CLASS CATEGORY & BLOCK & LOT & TOTAL UNITS & LAND SQUARE FEET & GROSS SQUARE FEET & SALE PRICE & building\_age\\
+\midrule
+Manhattan & 07 RENTALS - WALKUP APARTMENTS & 392 & 6 & 5 & 1633 & 6440 & 6625000 & 117\\
+Manhattan & 07 RENTALS - WALKUP APARTMENTS & 399 & 26 & 31 & 4616 & 18690 & NA & 116\\
+Manhattan & 07 RENTALS - WALKUP APARTMENTS & 399 & 39 & 17 & 2212 & 7803 & NA & 116\\
+Manhattan & 07 RENTALS - WALKUP APARTMENTS & 402 & 21 & 10 & 2272 & 6794 & 3936272 & 103\\
+Manhattan & 07 RENTALS - WALKUP APARTMENTS & 404 & 55 & 6 & 2369 & 4615 & 8000000 & 116\\
+\addlinespace
+Manhattan & 07 RENTALS - WALKUP APARTMENTS & 405 & 16 & 20 & 2581 & 9730 & NA & 117\\
+Manhattan & 07 RENTALS - WALKUP APARTMENTS & 406 & 32 & 8 & 1750 & 4226 & 3192840 & 96\\
+Manhattan & 07 RENTALS - WALKUP APARTMENTS & 407 & 18 & 46 & 5163 & 21007 & NA & 117\\
+Manhattan & 08 RENTALS - ELEVATOR APARTMENTS & 379 & 34 & 15 & 1534 & 9198 & NA & 97\\
+Manhattan & 08 RENTALS - ELEVATOR APARTMENTS & 387 & 153 & 24 & 4489 & 18523 & 16232000 & 96\\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+After these two operations, Table \ref{tab:datamiss} presents the percentage of missing data for each variable. We note the high percentage of missing data for the LAND SQUARE FEET and GROSS SQUARE FEET variables. We could, if we wished, use GROSS SQUARE FEET to predict some of the missing LAND SQUARE FEET and vice versa, but this would reduce the percentage only slightly. We therefore propose to delete these incomplete data rows and continue the analysis with data without missing elements.
+
+\begin{table}[H]
+\centering
+\caption{\label{tab:datamiss}Percentage of missing values by variable.}
+\centering
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{
+\begin{tabular}[t]{lr}
+\toprule
+  & NA\_Percentage\\
+\midrule
+BOROUGH & 0.000000\\
+NEIGHBORHOOD & 0.000000\\
+BUILDING CLASS CATEGORY & 0.000000\\
+TAX CLASS AT PRESENT & 1.009241\\
+BLOCK & 0.000000\\
+\addlinespace
+LOT & 0.000000\\
+RESIDENTIAL UNITS & 0.000000\\
+COMMERCIAL UNITS & 0.000000\\
+TOTAL UNITS & 0.000000\\
+LAND SQUARE FEET & 35.817009\\
+\addlinespace
+GROSS SQUARE FEET & 36.734347\\
+YEAR BUILT & 0.000000\\
+TAX CLASS AT TIME OF SALE & 0.000000\\
+BUILDING CLASS AT TIME OF SALE & 0.000000\\
+SALE PRICE & 0.000000\\
+\addlinespace
+sale\_year & 0.000000\\
+sale\_month & 0.000000\\
+building\_age & 0.000000\\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+The final cleansing step involved removing any outliers from the data, especially those that were more than 3 standard deviations away from the mean of the distribution. This processing involved both the target variable (SALE PRICE) and other variables such as LAND SQUARE FEET and GROSS SQUARE FEET.
+
+Table \ref{tab:datamiss} displays the progression of the correlation with the target variable after each cleaning stage. We notice a very significant evolution in data quality with predictors that are better correlated with the target variable.
+
+\begin{table}[H]
+\centering
+\caption{\label{tab:dataclean}Correlation with target variable after each cleaning step.}
+\centering
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{
+\begin{tabular}[t]{llrrr}
+\toprule
+  & Variable & Corr\_Default & Corr\_After\_Missing & Corr\_After\_Outliers\\
+\midrule
+BLOCK & BLOCK & -0.05146 & -0.06530 & -0.25466\\
+LOT & LOT & -0.01443 & -0.01031 & -0.04579\\
+RESIDENTIAL UNITS & RESIDENTIAL UNITS & 0.12270 & 0.14637 & 0.49386\\
+COMMERCIAL UNITS & COMMERCIAL UNITS & 0.04722 & 0.04620 & 0.31635\\
+TOTAL UNITS & TOTAL UNITS & 0.12821 & 0.14447 & 0.53572\\
+\addlinespace
+LAND SQUARE FEET & LAND SQUARE FEET & 0.04163 & 0.04619 & 0.16333\\
+GROSS SQUARE FEET & GROSS SQUARE FEET & 0.45534 & 0.52919 & 0.59587\\
+YEAR BUILT & YEAR BUILT & 0.00767 & 0.00144 & -0.15627\\
+SALE PRICE & SALE PRICE & 1.00000 & 1.00000 & 1.00000\\
+sale\_year & sale\_year & -0.00255 & -0.00336 & 0.00288\\
+\addlinespace
+building\_age & building\_age & -0.00767 & -0.00149 & 0.15628\\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\section{Exploratory data analysis (EDA)}\label{exploratory-data-analysis-eda}
+
+In this section, we propose to extend our understanding of the data through an exploratory analysis.We'd like to mention two references (Ermis (\citeproc{ref-Mustafa2021}{2021}) and Irizarry (\citeproc{ref-raf}{n.d.})) that have inspired us in the following analysis.
+
+\subsection{Sale Price Distribution with Density, Mean, and Median}\label{sale-price-distribution-with-density-mean-and-median}
+
+Figure \ref{fig:SalpriceDensity} illustrates the distribution of the target variable. We note a distribution that deviates from the normal distribution due to a slightly longer tail on the right, a source of asymmetry as indicated by the mean and median axes.However, for the rest of the analysis, we decided not to transform the data, as several algorithms will be trained and some are robust enough to take this problem into account.
+
+\begin{figure}[H]
+
+{\centering \includegraphics[width=0.8\linewidth]{Nyc_PropertyV2_files/figure-latex/SalpriceDensity-1} 
+
+}
+
+\caption{Sale Price Distribution with Density}\label{fig:SalpriceDensity}
+\end{figure}
+
+\subsection{Box Plot of Sale Price by Borough}\label{box-plot-of-sale-price-by-borough}
+
+Figure \ref{fig:SalpriceBox1} shows the box plot of sales prices by borough. It can be seen that there is a clear difference in property prices between the different boroughs. Manhattan has the most expensive real estate, with heterogeneous sales prices.The Bronx and Staten Island have the lowest and most homogeneous prices.
+
+\begin{figure}[H]
+
+{\centering \includegraphics[width=0.7\linewidth]{Nyc_PropertyV2_files/figure-latex/SalpriceBox1-1} 
+
+}
+
+\caption{Box Plot of Sale Price by Borough}\label{fig:SalpriceBox1}
+\end{figure}
+
+\subsection{Box Plot of Sale Price by Month}\label{box-plot-of-sale-price-by-month}
+
+Figure \ref{fig:SalpriceBox2} shows the box plot of sales prices by month of the year. It can be seen that there is no great difference in property prices compared with the different months of the year. Prices are relatively homogeneous for each month.
+
+\begin{figure}[H]
+
+{\centering \includegraphics[width=0.7\linewidth]{Nyc_PropertyV2_files/figure-latex/SalpriceBox2-1} 
+
+}
+
+\caption{Box Plot of Sale Price by Month}\label{fig:SalpriceBox2}
+\end{figure}
+
+\subsection{Sale Count by Month}\label{sale-count-by-month}
+
+Figure \ref{fig:SalByMonth} displays the number of sales by month of the year. It can be seen that there is no great difference in the number of properties sold compared to the different months of the year. Sales are fairly homogeneous over the year. Thus, there is no pronounced seasonality in the target variable, and the sales\_month variable provides us with very little information. In the rest of the analysis, it will be removed.
+
+\begin{figure}[H]
+
+{\centering \includegraphics[width=0.7\linewidth]{Nyc_PropertyV2_files/figure-latex/SalByMonth-1} 
+
+}
+
+\caption{Box Plot of Sale Price by Month}\label{fig:SalByMonth}
+\end{figure}
+
+\subsection{Average Land Square Feet by Borough}\label{average-land-square-feet-by-borough}
+
+Regarding the Land Square Feet of the buildings sold, figure \ref{fig:LandsqftByBorou} gives us the distribution according to the borough. We can note that the buildings sold on Staten Island, Queens and Bronx have on average the largest Land Square Feet, ranging from 3000 to 4000.
+
+\begin{figure}[H]
+
+{\centering \includegraphics[width=0.7\linewidth]{Nyc_PropertyV2_files/figure-latex/LandsqftByBorou-1} 
+
+}
+
+\caption{Average Land Square Feet by Borough}\label{fig:LandsqftByBorou}
+\end{figure}
+
+\subsection{Bar Plot for House Price by Top 10 Neighborhoods}\label{bar-plot-for-house-price-by-top-10-neighborhoods}
+
+Considering the 10 most dynamic neighborhoods in terms of real estate sales, figure \ref{fig:BarplotByNeighbor} shows us how the average sale price varies in these neighborhoods. We see that prices are high in the neighborhoods of BEDFORD STUYVESANT,FLUSHING-NORTH and BAYSIDE.
+
+\begin{figure}[H]
+
+{\centering \includegraphics[width=0.7\linewidth]{Nyc_PropertyV2_files/figure-latex/BarplotByNeighbor-1} 
+
+}
+
+\caption{Top 10 Neighborhoods by Number of Sales and Average Sale Price}\label{fig:BarplotByNeighbor}
+\end{figure}
+
+\subsection{Correlation Matrix Heatmap}\label{correlation-matrix-heatmap}
+
+To address the problem of multicollinearity among the predictors we have used the figure \ref{fig:CorrHeatmap}. It is evident from inspection of the figure that the variables YEAR BUILT,TOTAL UNITS and RESIDENTIAL UNITS are highly correlated with other variables in the projected model. We therefore decide to remove these variables. Also, the variables LOT, sale\_year, building\_age, tax\_class\_at\_present, neighborhood, building\_class\_at\_time\_of\_sale, sale\_month do not seem relevant to us for the rest of the analysis because they are weakly correlated with the target variable for some or duplicate information contained in other variables for others. These variables will therefore be removed.
+
+\begin{figure}[H]
+
+{\centering \includegraphics{Nyc_PropertyV2_files/figure-latex/CorrHeatmap-1} 
+
+}
+
+\caption{Correlation Matrix Heatmap}\label{fig:CorrHeatmap}
+\end{figure}
+
+\newpage
+
+\section{Machine Learning Model Development}\label{machine-learning-model-development}
+
+A statistical summary of the variables included in the development of the machine learning model is given below.
+
+\begin{verbatim}
+##           borough                        building_class_category
+##  Bronx        : 3333   01 ONE FAMILY DWELLINGS       :12534     
+##  Brooklyn     : 8238   02 TWO FAMILY DWELLINGS       : 9798     
+##  Manhattan    :  610   03 THREE FAMILY DWELLINGS     : 2299     
+##  Queens       :10642   07 RENTALS - WALKUP APARTMENTS: 1639     
+##  Staten Island: 4843   22 STORE BUILDINGS            :  411     
+##                        14 RENTALS - 4-10 UNIT        :  318     
+##                        (Other)                       :  667     
+##      block       commercial_units  land_square_feet gross_square_feet
+##  Min.   :    5   Min.   : 0.0000   Min.   :  200    Min.   :  120    
+##  1st Qu.: 2834   1st Qu.: 0.0000   1st Qu.: 2000    1st Qu.: 1350    
+##  Median : 4985   Median : 0.0000   Median : 2500    Median : 1836    
+##  Mean   : 5643   Mean   : 0.1198   Mean   : 3038    Mean   : 2437    
+##  3rd Qu.: 7898   3rd Qu.: 0.0000   3rd Qu.: 3800    3rd Qu.: 2560    
+##  Max.   :16319   Max.   :32.0000   Max.   :14608    Max.   :72781    
+##                                                                      
+##  tax_class_at_time_of_sale   sale_price      
+##  1:24651                   Min.   :     200  
+##  2: 2026                   1st Qu.:  430000  
+##  3:    0                   Median :  625000  
+##  4:  989                   Mean   :  918915  
+##                            3rd Qu.:  940000  
+##                            Max.   :11435000  
+## 
+\end{verbatim}
+
+We then proceed to format the data for modeling. First, we convert categorical variables into dichotomous variables using a process known as One Hot Encoding.We then partition the data into two parts (80/20 split), one for training (Train\_data) and the other for testing (Test\_data).
+
+\subsection{Model Selection}\label{model-selection}
+
+Five of the most common algorithms are trained and compared in performance on the basis of RSME. These are
+
+\begin{itemize}
+\tightlist
+\item
+  ``lm'': Linear Regression
+\item
+  ``ranger'': Random Forest, a faster version
+\item
+  ``svmRadial: Support Vector Machines with Radial Basis Function Kernel
+\item
+  ``gbm'': Stochastic Gradient Boosting
+\item
+  ``xgbTree'': eXtreme Gradient Boosting
+\end{itemize}
+
+Mathematically, mean absolute error (MAE) is defined by :
+\begin{equation} 
+    MAE = \frac{1}{N}\sum_{i}\left\| y_{i}-\hat{y}_{i}\right\|
+  \label{eq:metricMAE}
+\end{equation}
+and root mean square error (RMSE) by:
+
+\begin{equation} 
+    RMSE = \sqrt{\frac{1}{N}\sum_{i}\left(y_{i}-\hat{y}_{i}\right)^{2}}
+  \label{eq:metricRMSE}
+\end{equation}\\
+We define \(y_{i}\) as the price of property i sold. and denote our prediction with \(\hat{y}_{i}\).
+
+The ranger (Random Forest) model is the best-performing of all the trained models, based on the RMSEs shown in table \ref{tab:Modelresult}. Based on the test data, we reach an RMSE of \textbf{582403}. We then select this model and optimize it using the model parameters.
+
+\begin{table}[H]
+\centering
+\caption{\label{tab:Modelresult}Performance of each algorithm based on different metrics.}
+\centering
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{
+\begin{tabular}[t]{lrrrrrrl}
+\toprule
+Model & Train\_Score & Test\_Score & Train\_RMSE & Test\_RMSE & Train\_MAE & Test\_MAE & Execution\_Time\_Secs\\
+\midrule
+lm & 0.57400 & 0.58615 & 758781.3 & 723469.7 & 368659.6 & 363440.6 & 2.31 secs\\
+ranger & 0.92696 & 0.73386 & 325023.5 & 582403.0 & 149837.9 & 264432.7 & 20.61 secs\\
+svmRadial & 0.69385 & 0.60808 & 654247.0 & 707522.8 & 296685.7 & 317904.4 & 116.00 secs\\
+gbm & 0.65966 & 0.61826 & 680503.6 & 695217.8 & 322631.6 & 331347.9 & 6.81 secs\\
+xgbTree & 0.80031 & 0.70993 & 522391.3 & 605993.2 & 259271.3 & 284719.3 & 45.42 secs\\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\section{Results}\label{results}
+
+Our analysis shows that the Ranger Random Forest algorithm is the best performing of the 5 algorithms trained on NYC Property Sales data. Performance in terms of RMSE on the test data is \textbf{582031}.
+
+Figure \ref{fig:VarImp} shows the importance or contribution of each variable in the model in explaining the target variable (sale price). We note that the variables gross\_square\_feet, block, tax\_class\_at\_time\_of\_sale2 and land\_square\_feet alone explain 78\% of the variability in the selling price of real estate properties.
+
+\begin{table}[H]
+\centering
+\caption{\label{tab:Modelres2}Performance of the final algorithm.}
+\centering
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{
+\begin{tabular}[t]{lrrr}
+\toprule
+Model & Test\_Score & Test\_RMSE & Test\_MAE\\
+\midrule
+Ranger Random Forest model & 0.7341 & 582031 & 264572\\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\begin{figure}[H]
+
+{\centering \includegraphics{Nyc_PropertyV2_files/figure-latex/VarImp-1} 
+
+}
+
+\caption{Variable Importance (Random Forest)}\label{fig:VarImp}
+\end{figure}
+
+\section{Conclusion}\label{conclusion}
+
+In this study, we explored the NYC Property Sales data. First, we used various visualizations to understand the data. Then 5 algorithms were chosen and trained on part of the data. The analysis revealed that the Ranger Random Forest model is the best model, with an RMSE performance of \textbf{582031}. This model will therefore be ideal for predicting sale price in the New York City property market.
+
+\section*{References}\label{references}
+\addcontentsline{toc}{section}{References}
+
+\phantomsection\label{refs}
+\begin{CSLReferences}{1}{0}
+\bibitem[\citeproctext]{ref-Mustafa2021}
+Ermis, Mustafa Batuhan. 2021. {``End-to-End Machine Learning Regression Project.''} In. \url{https://www.kaggle.com/code/ermismbatuhan/end-to-end-machine-learning-regression-project}.
+
+\bibitem[\citeproctext]{ref-raf}
+Irizarry, Rafael A. n.d. \emph{Introduction to Data Science}. https://rafalab.github.io/dsbook/: HarvardX.
+
+\end{CSLReferences}
+
+\end{document}

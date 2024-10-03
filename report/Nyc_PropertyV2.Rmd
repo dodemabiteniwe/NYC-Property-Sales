@@ -1,0 +1,461 @@
+---
+title: 'NYC Proprety Sales data with R: Model for predicting sale price.'
+author: "Dodema BITENIWE"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  bookdown::pdf_document2:
+    keep_tex: true
+    extra_dependencies: ["float"]
+bibliography: ["Nyc_Property.bib"]
+biblio-style: "apalike"
+link-citations: true
+linkcolor: blue
+urlcolor: red
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+```
+
+\newpage
+
+# Project overview
+
+This project is part of Data Science professional certification pathway offered by HarvardX on edx. It is the second project in the final course of the program. In this project, we propose to analyze data relating to real estate properties in New York City, and to build a powerful model for predicting real estate sales prices in this city, based on the characteristics of these properties. 
+
+The data analyzed in this project comes from the ([kaggle](https://www.kaggle.com/datasets) site, a site on which you can find various data and sizes accessible to the public for data science training. The data from this project is named NYC Property Sales on the site, and contains records on every construction or fraction of a construction (apartment, etc.) in the New York City real estate market over the last twelve months. The data contains information on the location, address, type, sale price and sale date of each building unit. 
+
+In this report, we will start with an organization of the data, followed by an exploratory analysis of the data, then the construction of the model and presentation of the results, and finally the conclusion.
+
+# Data processing and organization
+
+```{r dataset, echo=FALSE, cache=TRUE}
+# Load the necessary library and dataset
+library(data.table)
+library(tidyverse)
+library(lubridate)
+library(caret)
+library(e1071)
+library(ggplot2)
+library(corrplot)
+library(scales)
+library(ggpubr)
+library(xgboost)
+library(gbm)
+library(janitor)
+library(grDevices)
+library(knitr)
+library(kableExtra)
+
+#  Data Loading
+temp <- tempfile()
+download.file("https://raw.githubusercontent.com/dodemabiteniwe/NYC-Property-Sales/main/nyc-rolling-sales.csv.zip", temp)
+unzip(temp, files = "nyc-rolling-sales.csv", exdir = "data")
+nyc_data <- fread("data/nyc-rolling-sales.csv")
+```
+
+The data was downloaded through this [link](https://www.kaggle.com/datasets/new-york-city/nyc-property-sales) and then cleaned. The first step was to format the data appropriately and remove any columns or variables that were not relevant to the purpose of the project. In the second stage, we processed the missing data to make it more compact. The final processing step involved removing outliers from the data.
+
+```{r process, echo=FALSE, cache=TRUE}
+# Step 2: Data Cleaning
+nyc_data <- nyc_data %>%
+  mutate(`RESIDENTIAL UNITS` = as.numeric(gsub(",|-", "", `RESIDENTIAL UNITS`)),
+         `COMMERCIAL UNITS` = as.numeric(gsub(",|-", "", `COMMERCIAL UNITS`)),
+         `TOTAL UNITS` = as.numeric(gsub(",|-", "", `TOTAL UNITS`)),
+         `LAND SQUARE FEET` = as.numeric(gsub(",|-", "", `LAND SQUARE FEET`)),
+         `GROSS SQUARE FEET` = as.numeric(gsub(",|-", "", `GROSS SQUARE FEET`)),
+         `SALE PRICE` = as.numeric(gsub(",|-", "", `SALE PRICE`)),
+         BLOCK = as.numeric(gsub(",|-", "", BLOCK)),
+         `YEAR BUILT` = as.numeric(gsub(",|-", "", `YEAR BUILT`)),
+         LOT = as.numeric(gsub(",|-", "", LOT)),
+         `SALE DATE` = as.Date(`SALE DATE`, format = "%m/%d/%Y"),
+         sale_year = year(`SALE DATE`),
+         sale_month = month(`SALE DATE`, label = TRUE),
+         building_age = year(`SALE DATE`) - `YEAR BUILT`,
+         BOROUGH = as.factor(c('1' = 'Manhattan', '2' = 'Bronx', '3' = 'Brooklyn', 
+                               '4' = 'Queens', '5' = 'Staten Island')[BOROUGH]),
+         across(c("BOROUGH", "NEIGHBORHOOD", "BUILDING CLASS CATEGORY", 
+                  "TAX CLASS AT PRESENT", "BUILDING CLASS AT TIME OF SALE", 
+                  "TAX CLASS AT TIME OF SALE"), as.factor)) %>%
+  select(-c(`BUILDING CLASS AT PRESENT`, `ZIP CODE`, ADDRESS, `APARTMENT NUMBER`,`SALE DATE`, V1, `EASE-MENT`))
+# Default correlations before any cleaning
+corr_default2 <- nyc_data %>%
+  select(where(is.numeric)) %>%  # Select only numeric variables
+  cor(use = "complete.obs")
+```
+
+Table \@ref(tab:datahead) shows the first lines of some relevant columns of data. The presence of missing data is easy to spot. We start by deleting rows where the selling price is negative or zero. A zero or extremely low sale price characterizes sales that are in fact transfers of ownership between parties: for example, parents transferring ownership of their home to a child after moving to retire.  
+Also, for the building_age variable, we require it to be non-zero and non-negative, otherwise it would be counted as missing data. 
+
+```{r datahead, echo=FALSE, cache=TRUE}
+library(knitr)
+library(kableExtra)
+nyc_data2<- nyc_data%>%
+  select(c(`BOROUGH`, `BUILDING CLASS CATEGORY`,`BLOCK`, LOT, `TOTAL UNITS`,`LAND SQUARE FEET`, `GROSS SQUARE FEET`, `SALE PRICE`, building_age))
+kable(
+  head(nyc_data2,10), booktabs = TRUE, caption = "first lines of some relevant columns of data")%>%
+  kable_styling(latex_options = c("HOLD_position","scale_down"))
+```
+
+After these two operations, Table \@ref(tab:datamiss)  presents the percentage of missing data for each variable. We note the high percentage of missing data for the LAND SQUARE FEET and GROSS SQUARE FEET variables. We could, if we wished, use GROSS SQUARE FEET to predict some of the missing LAND SQUARE FEET and vice versa, but this would reduce the percentage only slightly. We therefore propose to delete these incomplete data rows and continue the analysis with data without missing elements. 
+
+```{r datamiss, echo=FALSE, cache=TRUE}
+#-------------------------------------------Handle  missing values------------------------
+# Remove rows where sale price is missing or zero
+nyc_data <- nyc_data %>%
+  filter(`SALE PRICE` >100)%>%
+  mutate(building_age = ifelse(building_age < 0 | is.na(building_age), NA, building_age))
+
+# Replace empty values with NA
+nyc_data2 <- nyc_data%>%
+  mutate(across(where(is.factor), as.character)) %>%
+  mutate(across(where(is.character), ~na_if(.x, "")))
+
+# Calculate the missing value rate for each column
+na_rate2 <- nyc_data2 %>%
+  summarise(across(everything(), ~mean(is.na(.)) * 100))%>%t()
+colnames(na_rate2) <- "NA_Percentage"
+na_rate2 <- as.data.frame(na_rate2)
+kable(na_rate2, booktabs = TRUE, caption = "Percentage of missing values by variable.")%>%
+  kable_styling(latex_options = c("HOLD_position","scale_down"))
+
+# Drop rows with any missing values (NA) and Remove duplicate rows
+nyc_data <- nyc_data %>%
+  drop_na() %>%
+  distinct() %>%
+  filter(`COMMERCIAL UNITS` + `RESIDENTIAL UNITS` == `TOTAL UNITS`) %>%
+  filter(`TOTAL UNITS` != 0 &`YEAR BUILT` != 0 & `LAND SQUARE FEET` != 0 & `GROSS SQUARE FEET` != 0)
+
+corr_after_missing2 <- cor(nyc_data %>% select_if(is.numeric), use = "complete.obs")
+```
+
+The final cleansing step involved removing any outliers from the data, especially those that were more than 3 standard deviations away from the mean of the distribution. This processing involved both the target variable (SALE PRICE) and other variables such as LAND SQUARE FEET and GROSS SQUARE FEET. 
+
+Table \@ref(tab:datamiss) displays the progression of the correlation with the target variable after each cleaning stage. We notice a very significant evolution in data quality with predictors that are better correlated with the target variable. 
+
+```{r dataclean, echo=FALSE, cache=TRUE}
+#-----------------------------outlier removal-----------------------------------------
+nyc_data <- nyc_data %>%
+  filter(`TOTAL UNITS` != 2261 & `TOTAL UNITS` != 1866) %>%
+  filter(between(`GROSS SQUARE FEET`, mean(`GROSS SQUARE FEET`) - 3*sd(`GROSS SQUARE FEET`), 
+                 mean(`GROSS SQUARE FEET`) + 3*sd(`GROSS SQUARE FEET`))) %>%
+  filter(between(`LAND SQUARE FEET`, mean(`LAND SQUARE FEET`) - 3*sd(`LAND SQUARE FEET`), 
+                 mean(`LAND SQUARE FEET`) + 3*sd(`LAND SQUARE FEET`)))%>%
+  filter(between(`SALE PRICE`, mean(`SALE PRICE`) - 3*sd(`SALE PRICE`), 
+                 mean(`SALE PRICE`) + 3*sd(`SALE PRICE`)))
+
+corr_after_outliers2 <- cor(nyc_data %>% select_if(is.numeric), use = "complete.obs")
+
+#Combine all correlations into one table
+correlation_table <- data.frame(
+  Variable = rownames(corr_default2),
+  Corr_Default = round(corr_default2[, "SALE PRICE"], 5),
+  Corr_After_Missing = round(corr_after_missing2[, "SALE PRICE"], 5),
+  Corr_After_Outliers = round(corr_after_outliers2[, "SALE PRICE"], 5)
+)
+kable(
+  correlation_table, booktabs = TRUE, caption = "Correlation with target variable after each cleaning step.")%>%
+  kable_styling(latex_options = c("HOLD_position","scale_down"))
+```
+
+# Exploratory data analysis (EDA)
+
+In this section, we propose to extend our understanding of the data through an exploratory analysis.We'd like to mention two references (@Mustafa2021 and @raf) that have inspired us in the following analysis.
+
+## Sale Price Distribution with Density, Mean, and Median
+
+Figure \@ref(fig:SalpriceDensity) illustrates the distribution of the target variable. We note a distribution that deviates from the normal distribution due to a slightly longer tail on the right, a source of asymmetry as indicated by the mean and median axes.However, for the rest of the analysis, we decided not to transform the data, as several algorithms will be trained and some are robust enough to take this problem into account. 
+
+```{r SalpriceDensity, fig.cap= "Sale Price Distribution with Density", out.width = "80%",fig.align = 'center',results='hide', fig.pos='H', cache=TRUE}
+nyc_data_filtered <- nyc_data %>% filter(`SALE PRICE` >= 100 & `SALE PRICE` <= 5000000)
+
+# Sale Price Distribution with Density, Mean, and Median
+ggplot(nyc_data_filtered, aes(x = `SALE PRICE`)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 50, fill = "skyblue", color = "black", alpha = 0.7) +
+  geom_density(color = "red", linewidth = 1) +
+  geom_vline(aes(xintercept = mean(`SALE PRICE`, na.rm = TRUE)), color = "Violet", linetype = "dashed", size = 1) +
+  geom_vline(aes(xintercept = median(`SALE PRICE`, na.rm = TRUE)), color = "blue", linetype = "dashed", size = 1) +
+  labs(title = "Distribution of Sale Price", x = "Sale Price", y = "Density")+
+  theme_minimal() +
+  annotate("text", x = mean(nyc_data_filtered$`SALE PRICE`, na.rm = TRUE), y = 0.0000016, label = "Mean", color ="Violet" , angle = 90, vjust = 1.5) +
+  annotate("text", x = median(nyc_data_filtered$`SALE PRICE`, na.rm = TRUE), y = 0.0000016, label ="Median", color = "blue", angle = 90, vjust = -1)
+```
+
+## Box Plot of Sale Price by Borough
+
+Figure \@ref(fig:SalpriceBox1) shows the box plot of sales prices by borough. It can be seen that there is a clear difference in property prices between the different boroughs. Manhattan has the most expensive real estate, with heterogeneous sales prices.The Bronx and Staten Island have the lowest and most homogeneous prices. 
+
+```{r SalpriceBox1, fig.cap= "Box Plot of Sale Price by Borough", out.width = "70%", fig.align = 'center',results='hide', fig.pos='H', cache=TRUE}
+# Filter data to include only SALE PRICE values between 100 000 and 5,000,000
+nyc_data_filtered2 <- nyc_data %>% filter(`SALE PRICE` >= 100000 & `SALE PRICE` <= 5000000)
+ggplot(nyc_data_filtered2, aes(x = BOROUGH, y = `SALE PRICE`, fill = BOROUGH)) +
+  geom_boxplot() +labs(x = "Borough",y = "Sale Price")+
+  scale_fill_brewer(palette = "Set3")+ 
+  theme_minimal()+theme(legend.position = "none") 
+```
+
+## Box Plot of Sale Price by Month
+
+Figure \@ref(fig:SalpriceBox2) shows the box plot of sales prices by month of the year. It can be seen that there is no great difference in property prices compared with the different months of the year. Prices are relatively homogeneous for each month. 
+
+```{r SalpriceBox2, fig.cap= "Box Plot of Sale Price by Month", out.width = "70%",fig.align = 'center', results='hide', fig.pos='H', cache=TRUE}
+ggplot(nyc_data_filtered2, aes(x = sale_month, y = `SALE PRICE`, fill = sale_month)) +
+  geom_boxplot() +
+  labs( x = "Month", y = "Sale Price") +
+  scale_fill_brewer(palette = "Set3") +  
+  theme_minimal() +
+  theme(legend.position = "none")  
+```
+
+## Sale Count by Month
+
+Figure \@ref(fig:SalByMonth) displays the number of sales by month of the year. It can be seen that there is no great difference in the number of properties sold compared to the different months of the year. Sales are fairly homogeneous over the year. Thus, there is no pronounced seasonality in the target variable, and the sales_month variable provides us with very little information. In the rest of the analysis, it will be removed. 
+
+```{r SalByMonth, fig.cap= "Box Plot of Sale Price by Month", out.width = "70%",fig.align = 'center', results='hide', fig.pos='H', cache=TRUE}
+sales_count_by_month2 <- nyc_data%>%
+  group_by(sale_month) %>%
+  summarize(Sale_Count = n(), .groups = 'drop')
+
+ggplot(sales_count_by_month2, aes(x = sale_month, y = Sale_Count, fill = sale_month)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Sale Count by Month",
+       x = "Month",
+       y = "Number of Sales") +
+  scale_fill_brewer(palette = "Set3") +  
+  theme_minimal() +
+  theme(legend.position = "none") 
+```
+
+
+## Average Land Square Feet by Borough
+
+Regarding the Land Square Feet of the buildings sold, figure \@ref(fig:LandsqftByBorou) gives us the distribution according to the borough. We can note that the buildings sold on Staten Island, Queens and Bronx have on average the largest Land Square Feet, ranging from 3000 to 4000.
+
+```{r LandsqftByBorou, fig.cap= "Average Land Square Feet by Borough", out.width = "70%",fig.align = 'center', results='hide', fig.pos='H', cache=TRUE}
+nyc_data_filtered2 %>%
+  group_by(BOROUGH) %>%
+  summarise(avg_land_sqft = mean(`LAND SQUARE FEET`, na.rm = TRUE), .groups = 'drop') %>%
+  ggplot(aes(x = BOROUGH, y = avg_land_sqft, size = avg_land_sqft, color = BOROUGH)) +
+  geom_point(alpha = 0.7) + scale_size_continuous(range = c(8, 15))+
+  labs( x = "Borough", y = "Average Land Square Feet")+
+  theme_minimal() + theme(legend.position = "right")
+```
+
+## Bar Plot for House Price by Top 10 Neighborhoods
+
+Considering the 10 most dynamic neighborhoods in terms of real estate sales, figure \@ref(fig:BarplotByNeighbor) shows us how the average sale price varies in these neighborhoods. We see that prices are high in the neighborhoods of BEDFORD STUYVESANT,FLUSHING-NORTH and BAYSIDE.
+
+```{r BarplotByNeighbor, fig.cap= "Top 10 Neighborhoods by Number of Sales and Average Sale Price", out.width = "70%",fig.align = 'center', results='hide', fig.pos='H', cache=TRUE}
+nyc_data_filtered2%>%
+  group_by(NEIGHBORHOOD) %>%
+  summarize(Number_of_Sales = n(),
+            Avg_Sale_Price = mean(`SALE PRICE`, na.rm = TRUE), .groups = 'drop')%>%
+  arrange(desc(Number_of_Sales)) %>%
+  head(10)%>%
+  ggplot(aes(x = reorder(NEIGHBORHOOD, Number_of_Sales), y = Avg_Sale_Price, fill = NEIGHBORHOOD)) +
+  geom_bar(stat = "identity", show.legend = FALSE) +
+  coord_flip() +  # Flip coordinates for better readability
+  labs(x = "Neighborhood", y = "Average Sale Price") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+## Correlation Matrix Heatmap
+
+To address the problem of multicollinearity among the predictors we have used the figure \@ref(fig:CorrHeatmap). It is evident from inspection of the figure that the variables YEAR BUILT,TOTAL UNITS and RESIDENTIAL UNITS are highly correlated with other variables in the projected model. We therefore decide to remove these variables. Also, the variables LOT, sale_year, building_age, tax_class_at_present, neighborhood, building_class_at_time_of_sale, sale_month do not seem relevant to us for the rest of the analysis because they are weakly correlated with the target variable for some or duplicate information contained in other variables for others. These variables will therefore be removed.
+
+```{r CorrHeatmap, fig.cap= "Correlation Matrix Heatmap", fig.dim=c(8,7),fig.align = 'center', results='hide', fig.pos='H', cache=TRUE}
+numeric_columns <- nyc_data%>%
+  select_if(is.numeric) %>%
+  cor(use = "complete.obs")
+corrplot(numeric_columns, method = "color", tl.cex = 0.7, number.cex = 0.7, addCoef.col = "black", round = 2)
+```
+
+```{r Datareduce, results='hide', cache=TRUE}
+nyc_data_reduce <- nyc_data %>%
+  select(-c(LOT, `YEAR BUILT`, sale_year, building_age,`TOTAL UNITS`,`RESIDENTIAL UNITS`))
+# Clean column names to be lowercase and without spaces
+nyc_data_reduce <- nyc_data_reduce %>%
+  clean_names()
+nyc_data_reduce <- nyc_data_reduce %>%
+  select(-c(tax_class_at_present, neighborhood, building_class_at_time_of_sale, sale_month))
+```
+
+\newpage
+
+# Machine Learning Model Development
+
+A statistical summary of the variables included in the development of the machine learning model is given below.
+
+```{r Datasumary, cache=TRUE}
+nyc_sumary2 <- summary(nyc_data_reduce)
+print(nyc_sumary2)
+```
+
+We then proceed to format the data for modeling. First, we convert categorical variables into dichotomous variables using a process known as One Hot Encoding.We then partition the data into two parts (80/20 split), one for training (Train_data) and the other for testing (Test_data).
+
+```{r Dataprepa, cache=TRUE}
+# One Hot Encoding
+nyc_data_encoded <- nyc_data_reduce %>%
+  model.matrix(~.-1, .) %>%
+  as.data.frame()
+
+# Split data into training and testing
+set.seed(123)
+trainIndex <- createDataPartition(nyc_data_encoded$sale_price, p = .8, list = FALSE)
+train_data <- nyc_data_encoded[trainIndex, ]
+test_data <- nyc_data_encoded[-trainIndex, ]
+```
+
+## Model Selection
+
+Five of the most common algorithms are trained and compared in performance on the basis of RSME. These are 
+
+ - “lm": Linear Regression
+ - “ranger": Random Forest, a faster version
+ - “svmRadial: Support Vector Machines with Radial Basis Function Kernel
+ - “gbm": Stochastic Gradient Boosting
+ - “xgbTree": eXtreme Gradient Boosting
+
+Mathematically, mean absolute error (MAE) is defined by : 
+\begin{equation} 
+  	MAE = \frac{1}{N}\sum_{i}\left\| y_{i}-\hat{y}_{i}\right\|
+  (\#eq:metricMAE)
+\end{equation} 
+and root mean square error (RMSE) by:
+
+\begin{equation} 
+  	RMSE = \sqrt{\frac{1}{N}\sum_{i}\left(y_{i}-\hat{y}_{i}\right)^{2}}
+  (\#eq:metricRMSE)
+\end{equation}  
+We define $y_{i}$ as the price of property i sold.  and denote our prediction with $\hat{y}_{i}$.
+
+
+```{r Modeltrain, results='hide', cache=TRUE}
+train_control <- trainControl(method = "cv", number = 2)
+
+# Function to Evaluate Models
+evaluate_model <- function(model, train_data, test_data, response_var) {
+  start_time <- Sys.time()
+  model_fit <- train(as.formula(paste(response_var, "~ .")), data = train_data, method = model, trControl = train_control,preProcess = c("center", "scale","nzv"))
+  # Predictions for train and test datasets
+  train_predictions <- predict(model_fit, newdata = train_data)
+  test_predictions <- predict(model_fit, newdata = test_data)
+  #Execution time
+  end_time <- Sys.time()
+  exec_time <- round(difftime(end_time, start_time, units = "secs"), 2)
+  # Train metrics
+  train_rmse <- RMSE(train_predictions, train_data$sale_price)
+  train_mae <- MAE(train_predictions, train_data$sale_price)
+  train_score <- cor(train_predictions, train_data$sale_price)^2
+  
+  # Test metrics
+  test_rmse <- RMSE(test_predictions, test_data$sale_price)
+  test_mae <- MAE(test_predictions, test_data$sale_price)
+  test_score <- cor(test_predictions, test_data$sale_price)^2
+  # Return a list of all metrics including execution time
+  return(data.frame(
+    Model = model,
+    Train_Score = round(train_score, 5),
+    Test_Score = round(test_score, 5),
+    Train_RMSE = round(train_rmse, 5),
+    Test_RMSE = round(test_rmse, 5),
+    Train_MAE = round(train_mae, 5),
+    Test_MAE = round(test_mae, 5),
+    Execution_Time_Secs = exec_time
+  ))
+}
+
+# List of Models
+models <- c("lm", "ranger", "svmRadial", "gbm", "xgbTree")
+
+# Evaluate models
+results<- lapply(models, evaluate_model, train_data = train_data, test_data = test_data, response_var = "sale_price")
+ 
+ # Combine results into data frames
+results_df <- do.call(rbind, results)
+```
+
+The ranger (Random Forest) model is the best-performing of all the trained models, based on the RMSEs shown in table \@ref(tab:Modelresult). Based on the test data, we reach an RMSE  of **582403**. We then select this model and optimize it using the model parameters. 
+
+
+```{r Modelresult}
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+# Display results
+kable(
+  results_df, booktabs = TRUE, caption = "Performance of each algorithm based on different metrics.") %>%
+  kable_styling(latex_options = c("HOLD_position","scale_down"))
+```
+
+# Results
+
+```{r Modelopti, cache=TRUE}
+# Set up training control with cross-validation
+train_control <- trainControl(method = "cv", number = 10)
+
+# Train Ranger Random Forest model 
+rf_optimized <- train(sale_price ~ ., data = train_data, method = "ranger", trControl = train_control,  
+  num.trees = 500,            
+  importance = 'impurity',
+  preProcess = c("center", "scale","nzv")
+)
+
+# Predict on the test data using the best tuned model
+rf_predictions <- predict(rf_optimized, newdata = test_data)
+
+# Calculate the final metrics on the test data
+final_rmse <- RMSE(rf_predictions, test_data$sale_price)
+final_mae <- MAE(rf_predictions, test_data$sale_price)
+final_score <- cor(rf_predictions, test_data$sale_price)^2
+
+final_result <- data.frame(
+    Model = "Ranger Random Forest model",
+    Test_Score = round(final_score, 5),
+    Test_RMSE = round(final_rmse, 5),
+    Test_MAE = round(final_mae, 5)
+  )
+```
+
+
+Our analysis shows that the Ranger Random Forest algorithm is the best performing of the 5 algorithms trained on NYC Property Sales data. Performance in terms of RMSE on the test data is **582031**. 
+
+Figure \@ref(fig:VarImp) shows the importance or contribution of each variable in the model in explaining the target variable (sale price). We note that the variables gross_square_feet, block, tax_class_at_time_of_sale2 and land_square_feet alone explain 78% of the variability in the selling price of real estate properties.  
+
+
+```{r Modelres2}
+# Display results
+kable(
+  final_result, booktabs = TRUE, caption = "Performance of the final algorithm.")%>%
+  kable_styling(latex_options = c("HOLD_position","scale_down"))
+```
+
+
+```{r VarImp, fig.cap= "Variable Importance (Random Forest)", fig.align = 'center', results='hide', fig.pos='H', cache=TRUE}
+# Extract variable importance using caret's varImp function
+var_importance <- varImp(rf_optimized)$importance
+
+# Convert to a data frame and add row names as a column
+var_importance_df <- var_importance %>%
+  rownames_to_column(var = "Variable") %>%
+  mutate(Importance = Overall / sum(Overall) * 100)  # Calculate percentages
+
+# Plot variable importance using ggplot2
+ggplot(var_importance_df, aes(x = reorder(Variable, Importance), y = Importance, fill = Importance)) +
+  geom_bar(stat = "identity", show.legend = FALSE) +
+  geom_text(aes(label = paste0(round(Importance, 1), "%")), hjust = -0.2) +
+  coord_flip() +  # Flip to make it horizontal
+  labs(x = "Variables", y = "Importance (%)") +
+  scale_fill_gradient(low = "lightblue", high = "darkblue") + theme_minimal()+
+  scale_y_continuous(expand = expansion(mult = c(0, 0.3)))
+```
+
+# Conclusion
+
+In this study, we explored the NYC Property Sales data. First, we used various visualizations to understand the data. Then 5 algorithms were chosen and trained on part of the data. The analysis revealed that the Ranger Random Forest model is the best model, with an RMSE performance of **582031**. This model will therefore be ideal for predicting sale price in the New York City property market.
+
+# References
+
+
+
