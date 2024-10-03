@@ -31,21 +31,23 @@ In this report, we will start with an organization of the data, followed by an e
 
 ```{r dataset, echo=FALSE, cache=TRUE}
 # Load the necessary library and dataset
-library(data.table)
-library(tidyverse)
-library(lubridate)
-library(caret)
-library(e1071)
-library(ggplot2)
-library(corrplot)
-library(scales)
-library(ggpubr)
-library(xgboost)
-library(gbm)
-library(janitor)
-library(grDevices)
-library(knitr)
-library(kableExtra)
+# Function to install and load a single package
+install_and_load <- function(package) {
+  if (!require(package, character.only = TRUE)) {
+    install.packages(package, dependencies = TRUE)
+    library(package, character.only = TRUE)
+  }
+}
+
+# List of required packages
+required_packages <- c("data.table", "tidyverse", "lubridate","caret",
+                       "e1071","ggplot2","corrplot","scales","ggpubr",
+                       "xgboost","gbm","janitor","grDevices" ,"knitr","kableExtra", "randomForest", "ranger")
+
+# Install and load all required packages
+for (pkg in required_packages) {
+  install_and_load(pkg)
+}
 
 #  Data Loading
 temp <- tempfile()
