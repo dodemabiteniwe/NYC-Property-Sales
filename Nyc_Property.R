@@ -10,7 +10,7 @@ install_and_load <- function(package) {
 # List of required packages
 required_packages <- c("janitor","kableExtra", "ranger","data.table", "tidyverse", "lubridate","caret",
                        "e1071","ggplot2","corrplot","scales",
-                       "xgboost","gbm","kernlab" ,"knitr")
+                       "xgboost","gbm","kernlab" ,"knitr","bookdown")
 
 # Install and load all required packages
 for (pkg in required_packages) {
