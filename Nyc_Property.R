@@ -1,16 +1,16 @@
 # Load the necessary library and dataset
 # Function to install and load a single package
 install_and_load <- function(package) {
-  if (!require(package, character.only = TRUE)) {
+  if (!require(package,character.only = TRUE)) {
     install.packages(package, dependencies = TRUE)
-    library(package, character.only = TRUE)
+    library(package,character.only = TRUE)
   }
 }
 
 # List of required packages
-required_packages <- c("data.table", "tidyverse", "lubridate","caret",
-                       "e1071","ggplot2","corrplot","scales","ggpubr",
-                       "xgboost","gbm","janitor","grDevices" ,"knitr","kableExtra", "randomForest", "ranger")
+required_packages <- c("janitor","kableExtra", "ranger","data.table", "tidyverse", "lubridate","caret",
+                       "e1071","ggplot2","corrplot","scales",
+                       "xgboost","gbm","kernlab" ,"knitr")
 
 # Install and load all required packages
 for (pkg in required_packages) {
