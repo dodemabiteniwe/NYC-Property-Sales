@@ -6,19 +6,16 @@
 \documentclass[
 ]{article}
 \usepackage{amsmath,amssymb}
+\usepackage{lmodern}
 \usepackage{iftex}
 \ifPDFTeX
   \usepackage[T1]{fontenc}
   \usepackage[utf8]{inputenc}
   \usepackage{textcomp} % provide euro and other symbols
 \else % if luatex or xetex
-  \usepackage{unicode-math} % this also loads fontspec
+  \usepackage{unicode-math}
   \defaultfontfeatures{Scale=MatchLowercase}
   \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
-\fi
-\usepackage{lmodern}
-\ifPDFTeX\else
-  % xetex/luatex font selection
 \fi
 % Use upquote if available, for straight quotes in verbatim environments
 \IfFileExists{upquote.sty}{\usepackage{upquote}}{}
@@ -37,6 +34,18 @@
   \KOMAoptions{parskip=half}}
 \makeatother
 \usepackage{xcolor}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\hypersetup{
+  pdftitle={NYC Proprety Sales data with R: Model for predicting sale price.},
+  pdfauthor={Dodema BITENIWE},
+  colorlinks=true,
+  linkcolor={blue},
+  filecolor={Maroon},
+  citecolor={Blue},
+  urlcolor={red},
+  pdfcreator={LaTeX via pandoc}}
+\urlstyle{same} % disable monospaced font for URLs
 \usepackage[margin=1in]{geometry}
 \usepackage{longtable,booktabs,array}
 \usepackage{calc} % for calculating minipage widths
@@ -65,38 +74,28 @@
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
 \setcounter{secnumdepth}{5}
-% definitions for citeproc citations
-\NewDocumentCommand\citeproctext{}{}
-\NewDocumentCommand\citeproc{mm}{%
-  \begingroup\def\citeproctext{#2}\cite{#1}\endgroup}
-\makeatletter
- % allow citations to break across lines
- \let\@cite@ofmt\@firstofone
- % avoid brackets around text for \cite:
- \def\@biblabel#1{}
- \def\@cite#1#2{{#1\if@tempswa , #2\fi}}
-\makeatother
 \newlength{\cslhangindent}
 \setlength{\cslhangindent}{1.5em}
 \newlength{\csllabelwidth}
 \setlength{\csllabelwidth}{3em}
-\newenvironment{CSLReferences}[2] % #1 hanging-indent, #2 entry-spacing
- {\begin{list}{}{%
-  \setlength{\itemindent}{0pt}
-  \setlength{\leftmargin}{0pt}
-  \setlength{\parsep}{0pt}
+\newlength{\cslentryspacingunit} % times entry-spacing
+\setlength{\cslentryspacingunit}{\parskip}
+\newenvironment{CSLReferences}[2] % #1 hanging-ident, #2 entry spacing
+ {% don't indent paragraphs
+  \setlength{\parindent}{0pt}
   % turn on hanging indent if param 1 is 1
   \ifodd #1
-   \setlength{\leftmargin}{\cslhangindent}
-   \setlength{\itemindent}{-1\cslhangindent}
+  \let\oldpar\par
+  \def\par{\hangindent=\cslhangindent\oldpar}
   \fi
   % set entry spacing
-  \setlength{\itemsep}{#2\baselineskip}}}
- {\end{list}}
+  \setlength{\parskip}{#2\cslentryspacingunit}
+ }%
+ {}
 \usepackage{calc}
-\newcommand{\CSLBlock}[1]{\hfill\break\parbox[t]{\linewidth}{\strut\ignorespaces#1\strut}}
-\newcommand{\CSLLeftMargin}[1]{\parbox[t]{\csllabelwidth}{\strut#1\strut}}
-\newcommand{\CSLRightInline}[1]{\parbox[t]{\linewidth - \csllabelwidth}{\strut#1\strut}}
+\newcommand{\CSLBlock}[1]{#1\hfill\break}
+\newcommand{\CSLLeftMargin}[1]{\parbox[t]{\csllabelwidth}{#1}}
+\newcommand{\CSLRightInline}[1]{\parbox[t]{\linewidth - \csllabelwidth}{#1}\break}
 \newcommand{\CSLIndent}[1]{\hspace{\cslhangindent}#1}
 \usepackage{float}
 \usepackage{booktabs}
@@ -115,22 +114,10 @@
 \ifLuaTeX
   \usepackage{selnolig}  % disable illegal ligatures
 \fi
-\usepackage{bookmark}
-\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
-\urlstyle{same}
-\hypersetup{
-  pdftitle={NYC Proprety Sales data with R: Model for predicting sale price.},
-  pdfauthor={Dodema BITENIWE},
-  colorlinks=true,
-  linkcolor={blue},
-  filecolor={Maroon},
-  citecolor={Blue},
-  urlcolor={red},
-  pdfcreator={LaTeX via pandoc}}
 
 \title{NYC Proprety Sales data with R: Model for predicting sale price.}
 \author{Dodema BITENIWE}
-\date{03 octobre, 2024}
+\date{04 octobre, 2024}
 
 \begin{document}
 \maketitle
@@ -142,7 +129,8 @@
 }
 \newpage
 
-\section{Project overview}\label{project-overview}
+\hypertarget{project-overview}{%
+\section{Project overview}\label{project-overview}}
 
 This project is part of Data Science professional certification pathway offered by HarvardX on edx. It is the second project in the final course of the program. In this project, we propose to analyze data relating to real estate properties in New York City, and to build a powerful model for predicting real estate sales prices in this city, based on the characteristics of these properties.
 
@@ -150,7 +138,8 @@ The data analyzed in this project comes from the (\href{https://www.kaggle.com/d
 
 In this report, we will start with an organization of the data, followed by an exploratory analysis of the data, then the construction of the model and presentation of the results, and finally the conclusion.
 
-\section{Data processing and organization}\label{data-processing-and-organization}
+\hypertarget{data-processing-and-organization}{%
+\section{Data processing and organization}\label{data-processing-and-organization}}
 
 The data was downloaded through this \href{https://www.kaggle.com/datasets/new-york-city/nyc-property-sales}{link} and then cleaned. The first step was to format the data appropriately and remove any columns or variables that were not relevant to the purpose of the project. In the second stage, we processed the missing data to make it more compact. The final processing step involved removing outliers from the data.
 
@@ -247,11 +236,13 @@ building\_age & building\_age & -0.00767 & -0.00149 & 0.15628\\
 \end{tabular}}
 \end{table}
 
-\section{Exploratory data analysis (EDA)}\label{exploratory-data-analysis-eda}
+\hypertarget{exploratory-data-analysis-eda}{%
+\section{Exploratory data analysis (EDA)}\label{exploratory-data-analysis-eda}}
 
-In this section, we propose to extend our understanding of the data through an exploratory analysis.We'd like to mention two references (Ermis (\citeproc{ref-Mustafa2021}{2021}) and Irizarry (\citeproc{ref-raf}{n.d.})) that have inspired us in the following analysis.
+In this section, we propose to extend our understanding of the data through an exploratory analysis.We'd like to mention two references (Ermis (\protect\hyperlink{ref-Mustafa2021}{2021}) and Irizarry (\protect\hyperlink{ref-raf}{n.d.})) that have inspired us in the following analysis.
 
-\subsection{Sale Price Distribution with Density, Mean, and Median}\label{sale-price-distribution-with-density-mean-and-median}
+\hypertarget{sale-price-distribution-with-density-mean-and-median}{%
+\subsection{Sale Price Distribution with Density, Mean, and Median}\label{sale-price-distribution-with-density-mean-and-median}}
 
 Figure \ref{fig:SalpriceDensity} illustrates the distribution of the target variable. We note a distribution that deviates from the normal distribution due to a slightly longer tail on the right, a source of asymmetry as indicated by the mean and median axes.However, for the rest of the analysis, we decided not to transform the data, as several algorithms will be trained and some are robust enough to take this problem into account.
 
@@ -264,7 +255,8 @@ Figure \ref{fig:SalpriceDensity} illustrates the distribution of the target vari
 \caption{Sale Price Distribution with Density}\label{fig:SalpriceDensity}
 \end{figure}
 
-\subsection{Box Plot of Sale Price by Borough}\label{box-plot-of-sale-price-by-borough}
+\hypertarget{box-plot-of-sale-price-by-borough}{%
+\subsection{Box Plot of Sale Price by Borough}\label{box-plot-of-sale-price-by-borough}}
 
 Figure \ref{fig:SalpriceBox1} shows the box plot of sales prices by borough. It can be seen that there is a clear difference in property prices between the different boroughs. Manhattan has the most expensive real estate, with heterogeneous sales prices.The Bronx and Staten Island have the lowest and most homogeneous prices.
 
@@ -277,7 +269,8 @@ Figure \ref{fig:SalpriceBox1} shows the box plot of sales prices by borough. It 
 \caption{Box Plot of Sale Price by Borough}\label{fig:SalpriceBox1}
 \end{figure}
 
-\subsection{Box Plot of Sale Price by Month}\label{box-plot-of-sale-price-by-month}
+\hypertarget{box-plot-of-sale-price-by-month}{%
+\subsection{Box Plot of Sale Price by Month}\label{box-plot-of-sale-price-by-month}}
 
 Figure \ref{fig:SalpriceBox2} shows the box plot of sales prices by month of the year. It can be seen that there is no great difference in property prices compared with the different months of the year. Prices are relatively homogeneous for each month.
 
@@ -290,7 +283,8 @@ Figure \ref{fig:SalpriceBox2} shows the box plot of sales prices by month of the
 \caption{Box Plot of Sale Price by Month}\label{fig:SalpriceBox2}
 \end{figure}
 
-\subsection{Sale Count by Month}\label{sale-count-by-month}
+\hypertarget{sale-count-by-month}{%
+\subsection{Sale Count by Month}\label{sale-count-by-month}}
 
 Figure \ref{fig:SalByMonth} displays the number of sales by month of the year. It can be seen that there is no great difference in the number of properties sold compared to the different months of the year. Sales are fairly homogeneous over the year. Thus, there is no pronounced seasonality in the target variable, and the sales\_month variable provides us with very little information. In the rest of the analysis, it will be removed.
 
@@ -303,7 +297,8 @@ Figure \ref{fig:SalByMonth} displays the number of sales by month of the year. I
 \caption{Box Plot of Sale Price by Month}\label{fig:SalByMonth}
 \end{figure}
 
-\subsection{Average Land Square Feet by Borough}\label{average-land-square-feet-by-borough}
+\hypertarget{average-land-square-feet-by-borough}{%
+\subsection{Average Land Square Feet by Borough}\label{average-land-square-feet-by-borough}}
 
 Regarding the Land Square Feet of the buildings sold, figure \ref{fig:LandsqftByBorou} gives us the distribution according to the borough. We can note that the buildings sold on Staten Island, Queens and Bronx have on average the largest Land Square Feet, ranging from 3000 to 4000.
 
@@ -316,7 +311,8 @@ Regarding the Land Square Feet of the buildings sold, figure \ref{fig:LandsqftBy
 \caption{Average Land Square Feet by Borough}\label{fig:LandsqftByBorou}
 \end{figure}
 
-\subsection{Bar Plot for House Price by Top 10 Neighborhoods}\label{bar-plot-for-house-price-by-top-10-neighborhoods}
+\hypertarget{bar-plot-for-house-price-by-top-10-neighborhoods}{%
+\subsection{Bar Plot for House Price by Top 10 Neighborhoods}\label{bar-plot-for-house-price-by-top-10-neighborhoods}}
 
 Considering the 10 most dynamic neighborhoods in terms of real estate sales, figure \ref{fig:BarplotByNeighbor} shows us how the average sale price varies in these neighborhoods. We see that prices are high in the neighborhoods of BEDFORD STUYVESANT,FLUSHING-NORTH and BAYSIDE.
 
@@ -329,7 +325,8 @@ Considering the 10 most dynamic neighborhoods in terms of real estate sales, fig
 \caption{Top 10 Neighborhoods by Number of Sales and Average Sale Price}\label{fig:BarplotByNeighbor}
 \end{figure}
 
-\subsection{Correlation Matrix Heatmap}\label{correlation-matrix-heatmap}
+\hypertarget{correlation-matrix-heatmap}{%
+\subsection{Correlation Matrix Heatmap}\label{correlation-matrix-heatmap}}
 
 To address the problem of multicollinearity among the predictors we have used the figure \ref{fig:CorrHeatmap}. It is evident from inspection of the figure that the variables YEAR BUILT,TOTAL UNITS and RESIDENTIAL UNITS are highly correlated with other variables in the projected model. We therefore decide to remove these variables. Also, the variables LOT, sale\_year, building\_age, tax\_class\_at\_present, neighborhood, building\_class\_at\_time\_of\_sale, sale\_month do not seem relevant to us for the rest of the analysis because they are weakly correlated with the target variable for some or duplicate information contained in other variables for others. These variables will therefore be removed.
 
@@ -344,7 +341,8 @@ To address the problem of multicollinearity among the predictors we have used th
 
 \newpage
 
-\section{Machine Learning Model Development}\label{machine-learning-model-development}
+\hypertarget{machine-learning-model-development}{%
+\section{Machine Learning Model Development}\label{machine-learning-model-development}}
 
 A statistical summary of the variables included in the development of the machine learning model is given below.
 
@@ -377,7 +375,8 @@ A statistical summary of the variables included in the development of the machin
 
 We then proceed to format the data for modeling. First, we convert categorical variables into dichotomous variables using a process known as One Hot Encoding.We then partition the data into two parts (80/20 split), one for training (Train\_data) and the other for testing (Test\_data).
 
-\subsection{Model Selection}\label{model-selection}
+\hypertarget{model-selection}{%
+\subsection{Model Selection}\label{model-selection}}
 
 Five of the most common algorithms are trained and compared in performance on the basis of RSME. These are
 
@@ -419,16 +418,17 @@ The ranger (Random Forest) model is the best-performing of all the trained model
 \toprule
 Model & Train\_Score & Test\_Score & Train\_RMSE & Test\_RMSE & Train\_MAE & Test\_MAE & Execution\_Time\_Secs\\
 \midrule
-lm & 0.57400 & 0.58615 & 758781.3 & 723469.7 & 368659.6 & 363440.6 & 3.20 secs\\
-ranger & 0.92696 & 0.73386 & 325023.5 & 582403.0 & 149837.9 & 264432.7 & 28.62 secs\\
-svmRadial & 0.69385 & 0.60808 & 654247.0 & 707522.8 & 296685.7 & 317904.4 & 234.77 secs\\
-gbm & 0.65966 & 0.61826 & 680503.6 & 695217.8 & 322631.6 & 331347.9 & 9.93 secs\\
-xgbTree & 0.80031 & 0.70993 & 522391.3 & 605993.2 & 259271.3 & 284719.3 & 68.50 secs\\
+lm & 0.57400 & 0.58615 & 758781.3 & 723469.7 & 368659.6 & 363440.6 & 3.08 secs\\
+ranger & 0.92696 & 0.73386 & 325023.5 & 582403.0 & 149837.9 & 264432.7 & 32.60 secs\\
+svmRadial & 0.69385 & 0.60808 & 654247.0 & 707522.8 & 296685.7 & 317904.4 & 143.13 secs\\
+gbm & 0.65966 & 0.61826 & 680503.6 & 695217.8 & 322631.6 & 331347.9 & 9.70 secs\\
+xgbTree & 0.80031 & 0.70993 & 522391.3 & 605993.2 & 259271.3 & 284719.3 & 63.35 secs\\
 \bottomrule
 \end{tabular}}
 \end{table}
 
-\section{Results}\label{results}
+\hypertarget{results}{%
+\section{Results}\label{results}}
 
 Our analysis shows that the Ranger Random Forest algorithm is the best performing of the 5 algorithms trained on NYC Property Sales data. Performance in terms of RMSE on the test data is \textbf{582031}.
 
@@ -457,19 +457,21 @@ Ranger Random Forest model & 0.7341 & 582031 & 264572\\
 \caption{Variable Importance (Random Forest)}\label{fig:VarImp}
 \end{figure}
 
-\section{Conclusion}\label{conclusion}
+\hypertarget{conclusion}{%
+\section{Conclusion}\label{conclusion}}
 
 In this study, we explored the NYC Property Sales data. First, we used various visualizations to understand the data. Then 5 algorithms were chosen and trained on part of the data. The analysis revealed that the Ranger Random Forest model is the best model, with an RMSE performance of \textbf{582031}. This model will therefore be ideal for predicting sale price in the New York City property market.
 
-\section*{References}\label{references}
+\hypertarget{references}{%
+\section*{References}\label{references}}
 \addcontentsline{toc}{section}{References}
 
-\phantomsection\label{refs}
+\hypertarget{refs}{}
 \begin{CSLReferences}{1}{0}
-\bibitem[\citeproctext]{ref-Mustafa2021}
+\leavevmode\vadjust pre{\hypertarget{ref-Mustafa2021}{}}%
 Ermis, Mustafa Batuhan. 2021. {``End-to-End Machine Learning Regression Project.''} In. \url{https://www.kaggle.com/code/ermismbatuhan/end-to-end-machine-learning-regression-project}.
 
-\bibitem[\citeproctext]{ref-raf}
+\leavevmode\vadjust pre{\hypertarget{ref-raf}{}}%
 Irizarry, Rafael A. n.d. \emph{Introduction to Data Science}. https://rafalab.github.io/dsbook/: HarvardX.
 
 \end{CSLReferences}
